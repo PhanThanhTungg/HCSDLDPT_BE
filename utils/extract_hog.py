@@ -1,5 +1,5 @@
 import numpy as np
-from pre_processing import bgr_to_gray
+from utils.pre_processing import bgr_to_gray
 
 def manual_sobel_x(image):
 	if len(image.shape) > 2:
