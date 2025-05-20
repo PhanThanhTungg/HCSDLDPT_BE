@@ -46,9 +46,17 @@ def resize_image(img, new_width, new_height):
 			resized[i, j] = img[src_y, src_x]
 	return resized
 
+# Convert BGR to RGB
 def bgr_to_rgb(img):
 	return img[..., ::-1]
 
+# Convert BGR to Grayscale
+def bgr_to_gray(image):
+	b = image[..., 0].astype(np.float32)
+	g = image[..., 1].astype(np.float32)
+	r = image[..., 2].astype(np.float32)
+	gray = 0.114 * b + 0.587 * g + 0.299 * r
+	return gray.astype(np.uint8)
 
 # Face detection && resize && histogram equalization
 mp_face_detection = mp.solutions.face_detection
