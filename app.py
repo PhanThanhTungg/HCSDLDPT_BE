@@ -14,6 +14,7 @@ from utils.extract_uniform_lbp import extract_uniform_lbp
 from utils.extract_hog import extract_hog_features
 from utils.extract_face_landmarks import extract_face_landmarks
 from utils.train_extract_pca import process_new_image, extract_pca_features
+from utils.uploadImageToCloud import upload_image
 
 
 app = Flask(__name__)
@@ -61,6 +62,50 @@ def find_similar_images(input_image, features_db, top_n=4):
 def image_to_base64(image_path):
   with open(image_path, "rb") as img_file:
     return base64.b64encode(img_file.read()).decode('utf-8')
+
+@app.route('/AddData', methods=['POST'])
+def api_upload(): 
+  if 'images' not in request.files:
+    return jsonify({'error': 'No images provided'}), 400
+  
+  files = request.files.getlist('images')
+  if not files:
+    return jsonify({'error': 'No images provided'}), 400
+  
+  for file in files:
+    filename = file.filename
+    ext = os.path.splitext(filename)[1]
+    file_bytes = file.read()
+    nparr = np.frombuffer(file_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    imgHandled = faceDetect_resize_equalize(img)
+    upload_image(imgHandled, ext)
+    
+
+  # results = []
+  
+  # for file in files:
+  #   # Read and process the uploaded image
+  #   file_bytes = file.read()
+  #   nparr = np.frombuffer(file_bytes, np.uint8)
+  #   img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    
+  #   # Find similar images
+  #   similar_images = find_similar_images(img, features_db, top_n=4)
+    
+  #   # Prepare response with base64 encoded images
+  #   for i, (path, score) in enumerate(similar_images):
+  #     results.append({
+  #       'rank': i+1,
+  #       'path': path,
+  #       'score': float(score),
+  #       'image_base64': image_to_base64(path)
+  #     })
+  
+  return jsonify({'results': len(files)})
+
+
+
 
 @app.route('/find_similar', methods=['POST'])
 def api_find_similar():
