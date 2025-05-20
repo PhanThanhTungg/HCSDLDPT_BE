@@ -46,7 +46,7 @@ def train_pca(image_size=(64, 64), n_components=150):
     'mean': mean_vector,
     'components': components
   }
-  with open('pca_manual.pkl', 'wb') as f:
+  with open('Models/pca_manual.pkl', 'wb') as f:
       pickle.dump(pca_model, f)
 
 def process_new_image(img, size):
@@ -56,7 +56,7 @@ def process_new_image(img, size):
 	return img_flat
 
 def extract_pca_features(img):
-  with open('pca_manual.pkl', 'rb') as f:
+  with open('Models/pca_manual.pkl', 'rb') as f:
     model = pickle.load(f)
   mean_vector = model['mean']
   components = model['components']

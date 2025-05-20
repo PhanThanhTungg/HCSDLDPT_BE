@@ -34,7 +34,7 @@ def find_similar_images(input_image, features_db, top_n=4):
   
   input_lbp = extract_uniform_lbp(input_img)
 
-  with open('hog_svd_model.pkl', 'rb') as f:
+  with open('Models/hog_svd_model.pkl', 'rb') as f:
     hog_svd_model = pickle.load(f)
 
   svd = hog_svd_model['svd']
@@ -86,7 +86,7 @@ def api_upload():
     img_resized = cv2.resize(img, (width, height))
     url_cloud = upload_image(img_resized, ext)
 
-    with open('hog_svd_model.pkl', 'rb') as f:
+    with open('Models/hog_svd_model.pkl', 'rb') as f:
       hog_svd_model = pickle.load(f)
     svd = hog_svd_model['svd']
     weight_landmarks = 3.0 
