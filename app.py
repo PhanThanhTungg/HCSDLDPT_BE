@@ -15,13 +15,13 @@ from utils.extract_hog import extract_hog_features
 from utils.extract_face_landmarks import extract_face_landmarks
 from utils.train_extract_pca import process_new_image, extract_pca_features
 from utils.uploadImageToCloud import upload_image
+from utils.connectdtb import get_mongo_client
 
-
+db = get_mongo_client()
 app = Flask(__name__)
 CORS(app)
 
-with open('feature_dbs.pkl', 'rb') as f:
-  features_db = pickle.load(f)
+features_db = db['features'].find()
 
 def find_similar_images(input_image, features_db, top_n=4):
   if isinstance(input_image, str):  
@@ -72,6 +72,7 @@ def api_upload():
   if not files:
     return jsonify({'error': 'No images provided'}), 400
   
+  features_db = []
   for file in files:
     filename = file.filename
     ext = os.path.splitext(filename)[1]
@@ -79,9 +80,44 @@ def api_upload():
     nparr = np.frombuffer(file_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     imgHandled = faceDetect_resize_equalize(img)
-    upload_image(imgHandled, ext)
-    
 
+    width = 400
+    height = int(img.shape[0] * (width / img.shape[1]))
+    img_resized = cv2.resize(img, (width, height))
+    url_cloud = upload_image(img_resized, ext)
+
+    with open('hog_svd_model.pkl', 'rb') as f:
+      hog_svd_model = pickle.load(f)
+    svd = hog_svd_model['svd']
+    weight_landmarks = 3.0 
+
+    lbp_features = extract_uniform_lbp(imgHandled)
+    hog_features = svd.transform([extract_hog_features(imgHandled)])[0]
+    landmarks_features = extract_face_landmarks(imgHandled)
+    pca_features = extract_pca_features(process_new_image(imgHandled, (64,64)))
+
+    print("hog_features", hog_features.shape)
+    print("lbp_features", lbp_features.shape)
+    print("landmarks_features", landmarks_features.shape)
+    print("pca_features", pca_features.shape)
+
+
+    combined_features = np.concatenate([
+			(hog_features / np.linalg.norm(hog_features)) * (1 / np.sqrt(len(hog_features))),
+			(lbp_features / np.linalg.norm(lbp_features)) * (1 / np.sqrt(len(lbp_features))),
+			((landmarks_features / np.linalg.norm(landmarks_features)) * weight_landmarks) if np.linalg.norm(landmarks_features) > 0 else landmarks_features,
+			(pca_features / np.linalg.norm(pca_features)) * (1 / np.sqrt(len(pca_features)))
+		])
+    
+    db['features'].insert_one({
+      'path': url_cloud,
+      'features': combined_features.tolist()
+    })
+
+  return jsonify({
+    'code': 200,
+    'message': 'Images uploaded successfully'
+  })
   # results = []
   
   # for file in files:
@@ -103,8 +139,6 @@ def api_upload():
   #     })
   
   return jsonify({'results': len(files)})
-
-
 
 
 @app.route('/find_similar', methods=['POST'])
